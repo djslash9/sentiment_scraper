@@ -12,18 +12,12 @@ if 'queue' not in st.session_state:
 if 'logs' not in st.session_state:
     st.session_state.logs = []
 
-# Credentials Section (Top of App)
-st.subheader("Credentials")
-col_cred1, col_cred2 = st.columns(2)
+# Credentials (Loaded from Secrets)
+email = st.secrets.get("EMAIL", "")
+password = st.secrets.get("PASSWORD", "")
 
-# Try to load from secrets, otherwise default to empty
-default_email = st.secrets.get("EMAIL", "")
-default_password = st.secrets.get("PASSWORD", "")
-
-with col_cred1:
-    email = st.text_input("Email", value=default_email, key="cred_email")
-with col_cred2:
-    password = st.text_input("Password", value=default_password, type="password", key="cred_pass")
+if not email or not password:
+    st.error("Credentials not found in secrets. Please configure secrets.toml or Streamlit Cloud secrets.")
 
 st.divider()
 
