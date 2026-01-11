@@ -25,8 +25,9 @@ class SentiScraper:
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
+        options.add_argument("--window-size=1920,1080")
+        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
         
-        # Try to find system specific chrome if needed, otherwise let WDM handle it
         # Try to find system specific chrome if needed
         # On Streamlit Cloud (Linux), we often need to point to chromium
         service = None
@@ -51,7 +52,7 @@ class SentiScraper:
                 service = Service()
             
         self.driver = webdriver.Chrome(service=service, options=options)
-        self.wait = WebDriverWait(self.driver, 15)
+        self.wait = WebDriverWait(self.driver, 20) # Increased timeout
 
     def login(self, email, password):
         try:
@@ -67,13 +68,16 @@ class SentiScraper:
                 print("No cookie banner found.")
 
             print("Waiting for login fields...")
-            email_field = self.wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "input.input-with-label__input")))
+            # Wait for any input to be sure page loaded
+            self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "input")))
             
             try:
                 email_field_spec = self.driver.find_element(By.CSS_SELECTOR, "input.input-with-label__input[type='email']")
                 email_field_spec.clear()
                 email_field_spec.send_keys(email)
             except:
+                # Fallback
+                email_field = self.driver.find_element(By.CSS_SELECTOR, "input.input-with-label__input")
                 email_field.clear()
                 email_field.send_keys(email)
             
@@ -82,7 +86,7 @@ class SentiScraper:
             password_field.send_keys(password)
             
             submit_btn = self.driver.find_element(By.CSS_SELECTOR, "button.entry-form__submit")
-            submit_btn.click()
+            self.driver.execute_script("arguments[0].click();", submit_btn) # JS Click is stronger
             
             print("Login submitted. Waiting for dashboard...")
             self.wait.until(EC.url_contains("/app#/topics"))
@@ -90,6 +94,9 @@ class SentiScraper:
             return True
         except Exception as e:
             print(f"Login failed: {e}")
+            if self.driver:
+                print(f"Current URL: {self.driver.current_url}")
+                print(f"Page Source Preview: {self.driver.page_source[:500]}")
             return False
 
     def scrape_topic(self, topic_id, start_date, end_date):
