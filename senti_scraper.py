@@ -27,13 +27,30 @@ class SentiScraper:
         options.add_argument("--disable-gpu")
         
         # Try to find system specific chrome if needed, otherwise let WDM handle it
+        # Try to find system specific chrome if needed
         # On Streamlit Cloud (Linux), we often need to point to chromium
+        service = None
         if os.path.exists("/usr/bin/chromium"):
              options.binary_location = "/usr/bin/chromium"
+             # If we are using system chromium, we should try to use system chromedriver too
+             # This avoids version mismatch errors
+             if os.path.exists("/usr/bin/chromedriver"):
+                 service = Service("/usr/bin/chromedriver")
+             elif os.path.exists("/usr/lib/chromium-browser/chromedriver"):
+                 service = Service("/usr/lib/chromium-browser/chromedriver")
+
         elif os.path.exists("/usr/bin/google-chrome"):
              options.binary_location = "/usr/bin/google-chrome"
         
-        self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        # Fallback to WDM if no system driver found
+        if not service:
+            try:
+                service = Service(ChromeDriverManager().install())
+            except:
+                # Last ditch effort: try finding generic chromedriver
+                service = Service()
+            
+        self.driver = webdriver.Chrome(service=service, options=options)
         self.wait = WebDriverWait(self.driver, 15)
 
     def login(self, email, password):
