@@ -20,6 +20,19 @@ class SentiScraper:
         prefs = {"download.default_directory": self.download_dir}
         options.add_experimental_option("prefs", prefs)
         
+        # Cloud/Headless compatibility settings
+        options.add_argument("--headless")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+        
+        # Try to find system specific chrome if needed, otherwise let WDM handle it
+        # On Streamlit Cloud (Linux), we often need to point to chromium
+        if os.path.exists("/usr/bin/chromium"):
+             options.binary_location = "/usr/bin/chromium"
+        elif os.path.exists("/usr/bin/google-chrome"):
+             options.binary_location = "/usr/bin/google-chrome"
+        
         self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
         self.wait = WebDriverWait(self.driver, 15)
 
